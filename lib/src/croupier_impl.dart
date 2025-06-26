@@ -334,7 +334,9 @@ class _SocketClusterClientImpl implements SocketClusterClient {
 
     // 2. Attempt to reconnect after awaiting the timeout
     await Future.delayed(Duration(milliseconds: timeout));
-    await connect();
+    if (__state == ConnectionState.closed) {
+      await connect();
+    }
 
     // 3. Increment the number of attempts made to reconnect to the server.
     _reconnectAttemptsMade++;
@@ -579,18 +581,18 @@ class _SocketClusterClientImpl implements SocketClusterClient {
   }
 
   void _emit(SCEvent event) {
-    _eventsMultiplex!.addToChannel(event.name, null);
+    _eventsMultiplex?.addToChannel(event.name, null);
   }
 
   void _emitEvent(String event, [dynamic data]) {
-    _eventsMultiplex!.addToChannel(event, data);
+    _eventsMultiplex?.addToChannel(event, data);
   }
 
   void _emitReceive(String event, dynamic data) {
-    _receiveMultiplex!.addToChannel(event, data);
+    _receiveMultiplex?.addToChannel(event, data);
   }
 
   void _emitInvoke(String event, dynamic data) {
-    _invokeMultiplex!.addToChannel(event, data);
+    _invokeMultiplex?.addToChannel(event, data);
   }
 }
