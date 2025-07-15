@@ -213,25 +213,37 @@ class _SocketClusterClientImpl implements SocketClusterClient {
   }
 
   Future<void> _onSocketOpen() async {
-    var status = await invoke(
-      '#handshake',
-      {'authToken': _authToken},
-      Options(force: true),
-    );
+    try {
 
-    _id = status['id'];
-    _pingInterval = status['pingTimeout'];
-    if (status['isAuthenticated']) {
-      _authState = AuthenticationState.authenticated;
-    } else {
-      _authState = AuthenticationState.unauthenticated;
-      _authToken = null;
+      var status = await invoke(
+        '#handshake',
+        {'authToken': _authToken},
+        Options(
+          force: true,
+          noTimeout: true,
+        ),
+      );
+
+      _id = status['id'];
+      _pingInterval = status['pingTimeout'];
+      if (status['isAuthenticated']) {
+        _authState = AuthenticationState.authenticated;
+      } else {
+        _authState = AuthenticationState.unauthenticated;
+        _authToken = null;
+      }
+      _reconnectAttemptsMade = 0;
+
+      _state = ConnectionState.open;
+      _emit(SCEvent.ready);
+      _flushOutboundBuffer();
+    } catch (e) {
+      print('Handshake failed: $e');
+      await close(1011, 'Handshake failed');
+      if (reconnectPolicy.autoReconnect) {
+        await _reconnectDelay();
+      }
     }
-    _reconnectAttemptsMade = 0;
-
-    _state = ConnectionState.open;
-    _emit(SCEvent.ready);
-    _flushOutboundBuffer();
   }
 
   void _onSocketMessage(dynamic message) {
